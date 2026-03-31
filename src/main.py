@@ -1,16 +1,22 @@
 from fastapi import FastAPI, status
 from src.models.Account import Account
 from src.schemas.Account import AccountCreate, DepositRequest, WithdrawRequest, GetTransactionsRequest
+import asyncio
+
 app = FastAPI()
 
 fake_db = {}
+lock = asyncio.Lock()
 
 @app.post("/create_account/", status_code=status.HTTP_201_CREATED)
-def create_account(data: AccountCreate):
-    user_account = Account(
-        name=data.name,
-        number_account=data.number_account
-    )
+async def create_account(data: AccountCreate):
+    await asyncio.sleep(0)
+    
+    async with lock:
+        user_account = Account(
+            name=data.name,
+            number_account=data.number_account
+        )
 
     fake_db[user_account.number_account] = user_account
 
@@ -20,15 +26,17 @@ def create_account(data: AccountCreate):
     }
 
 @app.post("/deposit/")
-def make_deposit(data: DepositRequest):
-    account = fake_db.get(data.number_account)
+async def make_deposit(data: DepositRequest):
+    await asyncio.sleep(0)
+    
+    async with lock:
+        account = fake_db.get(data.number_account)
 
     if not account:
         return {"error": "Account not found"}
 
     try:
         account.deposit(data.value)
-        account._add_transaction("deposit", data.value)
     except ValueError as e:
         return {"error": str(e)}
 
@@ -38,15 +46,17 @@ def make_deposit(data: DepositRequest):
     }
     
 @app.post("/withdraw/")
-def make_withdraw(data: WithdrawRequest):
-    account = fake_db.get(data.number_account)
+async def make_withdraw(data: WithdrawRequest):
+    asyncio.sleep(0)
+    
+    async with lock:
+        account = fake_db.get(data.number_account)
     
     if not account:
         return {"error": "Account not found"}
     
     try:
         account.withdraw(data.value)
-        account._add_transaction("withdraw", data.value)
     except ValueError as e:
         return {"error": str(e)}
     return{
@@ -55,8 +65,10 @@ def make_withdraw(data: WithdrawRequest):
     }
     
 @app.get("/transactions/")
-def get_transactions(data : GetTransactionsRequest):
-    account = fake_db.get(data.number_account)
+async def get_transactions(data : GetTransactionsRequest):
+    asyncio.sleep(0)
+    async with lock:
+        account = fake_db.get(data.number_account)
     
     if not account:
         return {"error": "Account not found"}
